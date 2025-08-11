@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Funciones Químicas Inorgánicas Interactivas</title>
+    <script src="https://cdn.tailwindcss.com" onerror="console.error('Failed to load Tailwind CSS');"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" onerror="console.error('Failed to load Chart.js'); document.getElementById(\'summary-chart\').innerHTML = \'<p class=\'text-red-500 text-center\'>Error al cargar el gráfico. Por favor, verifica tu conexión.</p>\';"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals -->
+    <!-- Application Structure Plan: The application uses a tab-based navigation structure. The main functions (Óxidos, Hidruros, etc.) are presented as clickable tabs at the top. This allows the user to focus on one chemical function at a time, preventing information overload. Clicking a tab dynamically updates the main content area with detailed information (functional group, formation, nomenclature) for that specific function. This interactive, non-linear approach is more engaging and user-friendly for learning than a static, scrolling document. A summary chart is included to provide a high-level visual comparison. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Main chemical functions. Goal: Navigation. Viz/Method: Tab buttons (HTML/CSS). Interaction: Click to display content. Justification: Organizes content into clear, user-selectable sections.
+        - Report Info: Formation reactions. Goal: Show process. Viz/Method: HTML/CSS flexbox diagrams. Interaction: None (static visual). Justification: More intuitive than plain text equations.
+        - Report Info: Nomenclature systems. Goal: Organize/Compare. Viz/Method: Styled cards (HTML/CSS). Interaction: None. Justification: Clear visual separation of different naming rules.
+        - Report Info: Overall complexity. Goal: Compare functions. Viz/Method: Stacked Bar Chart (Chart.js/Canvas). Interaction: Hover for tooltips. Justification: Provides a clear visual representation of how more complex compounds are derived from simpler ones, offering a hierarchical understanding that was missing. The chart now correctly represents the user's provided visual.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .tab-active, .tab-active:hover, .tab-active:focus, .tab-active:active, .tab-active:focus-visible {
+            color: #FFFFFF !important;
+        }
+
+        /* Tabs container positioning for animated highlight */
+        #tabs {
+            position: relative;
+        }
+        /* Ensure buttons render above the highlight */
+        .tab-btn {
+            position: relative;
+            z-index: 1;
+        }
+        /* Animated moving background highlight */
+        .tab-highlight {
+            position: absolute;
+            z-index: 0;
+            background-color: #4A5568; /* slate-700 */
+            border-radius: 0.5rem 0.5rem 0 0; /* match rounded-t-lg */
+            transition: left 300ms ease, top 300ms ease, width 300ms ease, height 300ms ease;
+            pointer-events: none;
+        }
+
+        /* Content animation */
+        .section-content {
+            animation: fadeSlideIn 300ms ease both;
+        }
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateX(16px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .reaction-box {
+            border: 1px solid #CBD5E0; /* cool-gray-300 */
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            background-color: #F7FAFC; /* gray-50 */
+            text-align: center;
+            min-width: 100px;
+        }
+        .reaction-symbol {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #718096; /* gray-500 */
+            padding: 0 1rem;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 40vh;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-700">Explorador de Funciones Químicas Inorgánicas</h1>
+            <p class="text-md text-gray-600 mt-2">Una guía interactiva para entender los principales grupos de compuestos inorgánicos.</p>
+        </header>
+
+        <main>
+            <section id="summary-chart" class="mb-10 bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-semibold text-center mb-4">Jerarquía de Formación y Composición</h2>
+                <p class="text-center text-gray-600 mb-6">Este gráfico apilado muestra los componentes o pasos de formación de cada función química. Además, el tamaño de la barra indica la cantidad de elementos que componen el compuesto.</p>
+                <div class="chart-container">
+                    <canvas id="complexityChart"></canvas>
+                </div>
+            </section>
+
+            <div class="bg-white p-4 sm:p-6 rounded-lg shadow-lg">
+                <nav id="tabs" class="flex flex-wrap justify-center border-b-2 border-gray-200 mb-6">
+                    <!-- Tabs will be inserted here by JS -->
+                </nav>
+
+                <div id="content-area">
+                    <!-- Dynamic content will be loaded here -->
+                </div>
+            </div>
+        </main>
+
+        <footer class="text-center mt-12 text-gray-500 text-sm">
+            
+        </footer>
+    </div>
+
+    <script>
+        const functionsData = {
+            oxidos: {
+                name: "Óxidos",
+                content: `
+                    <div class="p-2">
+                        <h3 class="text-2xl font-semibold mb-4 text-slate-700">Óxidos</h3>
+                        <div class="mb-6">
+                            <h4 class="font-bold text-lg mb-2">Grupo Funcional</h4>
+                            <p>El átomo de Oxígeno (O<sup>-2</sup>) es el grupo funcional que caracteriza a estos compuestos.</p>
+                        </div>
+                        <div class="mb-6">
+                            <h4 class="font-bold text-lg mb-3">Formación</h4>
+                            <p class="mb-4">Se forman por la combinación de un elemento químico con el oxígeno. Se dividen en dos categorías principales:</p>
+                            <div class="space-y-4">
+                                <div class="bg-gray-50 p-4 rounded-lg">
+                                    <h5 class="font-semibold mb-2">Óxidos Básicos</h5>
+                                    <div class="flex items-center justify-center flex-wrap">
+                                        <div class="reaction-box">Metal</div>
+                                        <div class="reaction-symbol">+</div>
+                                        <div class="reaction-box">O<sub>2</sub></div>
+                                        <div class="reaction-symbol">→</div>
+                                        <div class="reaction-box font-semibold">Óxido Básico</div>
+                                    </div>
+                                </div>
+                                <div class="bg-gray-50 p-4 rounded-lg">
+                                    <h5 class="font-semibold mb-2">Óxidos Ácidos (Anhídridos)</h5>
+                                    <div class="flex items-center justify-center flex-wrap">
+                                        <div class="reaction-box">No Metal</div>
+                                        <div class="reaction-symbol">+</div>
+                                        <div class="reaction-box">O<sub>2</sub></div>
+                                        <div class="reaction-symbol">→</div>
+                                        <div class="reaction-box font-semibold">Óxido Ácido</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-3">Nomenclatura</h4>
+                            <div class="grid md:grid-cols-3 gap-4">
+                                <div class="border p-4 rounded-md"><h5 class="font-semibold">Tradicional</h5><p class="text-sm">Usa prefijos y sufijos como "ico" (mayor valencia) y "oso" (menor valencia).</p></div>
+                                <div class="border p-4 rounded-md"><h5 class="font-semibold">Stock</h5><p class="text-sm">Indica el número de oxidación del metal con números romanos.</p></div>
+                                <div class="border p-4 rounded-md"><h5 class="font-semibold">Sistemática</h5><p class="text-sm">Usa prefijos numéricos (mono-, di-, tri-) para indicar la cantidad de átomos.</p></div>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            hidruros: {
+                name: "Hidruros",
+                content: `
+                    <div class="p-2">
+                        <h3 class="text-2xl font-semibold mb-4 text-slate-700">Hidruros</h3>
+                        <div class="mb-6">
+                            <h4 class="font-bold text-lg mb-2">Grupo Funcional</h4>
+                            <p>El ion Hidruro (H<sup>-1</sup>) con metales, o el Hidrógeno (H<sup>+1</sup>) con no metales.</p>
+                        </div>
+                        <div class="mb-6">
+                            <h4 class="font-bold text-lg mb-3">Formación</h4>
+                             <div class="space-y-4">
+                                <div class="bg-gray-50 p-4 rounded-lg">
+                                    <h5 class="font-semibold mb-2">Hidruros Metálicos</h5>
+                                    <div class="flex items-center justify-center flex-wrap">
+                                        <div class="reaction-box">Metal</div>
+                                        <div class="reaction-symbol">+</div>
+                                        <div class="reaction-box">H<sub>2</sub></div>
+                                        <div class="reaction-symbol">→</div>
+                                        <div class="reaction-box font-semibold">Hidruro Metálico</div>
+                                    </div>
+                                </div>
+                                <div class="bg-gray-50 p-4 rounded-lg">
+                                    <h5 class="font-semibold mb-2">Hidruros No Metálicos</h5>
+                                    <div class="flex items-center justify-center flex-wrap">
+                                        <div class="reaction-box">No Metal</div>
+                                        <div class="reaction-symbol">+</div>
+                                        <div class="reaction-box">H<sub>2</sub></div>
+                                        <div class="reaction-symbol">→</div>
+                                        <div class="reaction-box font-semibold">Hidruro No Metálico</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-3">Nomenclatura</h4>
+                            <p>Se nombran de forma similar a los óxidos, utilizando las nomenclaturas Tradicional, Stock y Sistemática.</p>
+                        </div>
+                    </div>
+                `
+            },
+            hidroxidos: {
+                name: "Hidróxidos",
+                content: `
+                    <div class="p-2">
+                        <h3 class="text-2xl font-semibold mb-4 text-slate-700">Hidróxidos (Bases)</h3>
+                        <div class="mb-6">
+                            <h4 class="font-bold text-lg mb-2">Grupo Funcional</h4>
+                            <p>El ion Hidróxido (OH<sup>-1</sup>).</p>
+                        </div>
+                        <div class="mb-6">
+                            <h4 class="font-bold text-lg mb-3">Formación</h4>
+                             <div class="space-y-4">
+                                <div class="bg-gray-50 p-4 rounded-lg">
+                                    <h5 class="font-semibold mb-2">Hidróxidos</h5>
+                                    <div class="flex items-center justify-center flex-wrap">
+                                        <div class="reaction-box">Óxido Básico</div>
+                                        <div class="reaction-symbol">+</div>
+                                        <div class="reaction-box">H<sub>2</sub>O</div>
+                                        <div class="reaction-symbol">→</div>
+                                        <div class="reaction-box font-semibold">Hidróxido (Base)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-3">Nomenclatura</h4>
+                            <p>Se nombran con la palabra "Hidróxido" seguida del nombre del metal, aplicando las reglas de las nomenclaturas Tradicional, Stock o Sistemática.</p>
+                        </div>
+                    </div>
+                `
+            },
+            acidos: {
+                name: "Ácidos",
+                content: `
+                    <div class="p-2">
+                        <h3 class="text-2xl font-semibold mb-4 text-slate-700">Ácidos</h3>
+                        <div class="mb-6">
+                            <h4 class="font-bold text-lg mb-2">Grupo Funcional</h4>
+                            <p>Un átomo de Hidrógeno que puede ser liberado como un protón (H<sup>+</sup>).</p>
+                        </div>
+                        <div class="mb-6">
+                            <h4 class="font-bold text-lg mb-3">Formación</h4>
+                            <div class="space-y-4">
+                                <div class="bg-gray-50 p-4 rounded-lg">
+                                    <h5 class="font-semibold mb-2">Hidrácidos</h5>
+                                    <div class="flex items-center justify-center flex-wrap">
+                                        <div class="reaction-box">Hidrógeno</div>
+                                        <div class="reaction-symbol">+</div>
+                                        <div class="reaction-box">No Metal (G 16/17)</div>
+                                        <div class="reaction-symbol">→</div>
+                                        <div class="reaction-box font-semibold">Hidrácido</div>
+                                    </div>
+                                </div>
+                                <div class="bg-gray-50 p-4 rounded-lg">
+                                    <h5 class="font-semibold mb-2">Oxácidos</h5>
+                                    <div class="flex items-center justify-center flex-wrap">
+                                        <div class="reaction-box">Óxido Ácido</div>
+                                        <div class="reaction-symbol">+</div>
+                                        <div class="reaction-box">H<sub>2</sub>O</div>
+                                        <div class="reaction-symbol">→</div>
+                                        <div class="reaction-box font-semibold">Oxácido</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-3">Nomenclatura</h4>
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div class="border p-4 rounded-md"><h5 class="font-semibold">Hidrácidos</h5><p class="text-sm">Se usa el sufijo "-hídrico" (ej. Ácido Clorhídrico).</p></div>
+                                <div class="border p-4 rounded-md"><h5 class="font-semibold">Oxácidos</h5><p class="text-sm">Se usan las nomenclaturas Stock y Tradicional (sufijos "ico" y "oso").</p></div>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            sales: {
+                name: "Sales",
+                content: `
+                    <div class="p-2">
+                        <h3 class="text-2xl font-semibold mb-4 text-slate-700">Sales</h3>
+                        <div class="mb-6">
+                            <h4 class="font-bold text-lg mb-2">Grupo Funcional</h4>
+                            <p>Formadas por cationes (generalmente metálicos) y aniones.</p>
+                        </div>
+                        <div class="mb-6">
+                            <h4 class="font-bold text-lg mb-3">Formación</h4>
+                            <p class="mb-2">Generalmente se producen por una reacción de neutralización:</p>
+                            <div class="space-y-4">
+                                <div class="bg-gray-50 p-4 rounded-lg">
+                                    <h5 class="font-semibold mb-2">Sales Haloideas</h5>
+                                    <div class="flex items-center justify-center flex-wrap">
+                                        <div class="reaction-box">Hidrácido</div>
+                                        <div class="reaction-symbol">+</div>
+                                        <div class="reaction-box">Base</div>
+                                        <div class="reaction-symbol">→</div>
+                                        <div class="reaction-box font-semibold">Sal Haloidea + H<sub>2</sub>O</div>
+                                    </div>
+                                </div>
+                                <div class="bg-gray-50 p-4 rounded-lg">
+                                    <h5 class="font-semibold mb-2">Oxisales</h5>
+                                    <div class="flex items-center justify-center flex-wrap">
+                                        <div class="reaction-box">Oxácido</div>
+                                        <div class="reaction-symbol">+</div>
+                                        <div class="reaction-box">Base</div>
+                                        <div class="reaction-symbol">→</div>
+                                        <div class="reaction-box font-semibold">Oxisal + H<sub>2</sub>O</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-3">Nomenclatura</h4>
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div class="border p-4 rounded-md"><h5 class="font-semibold">Sales Haloideas</h5><p class="text-sm">El anión termina en "-uro" (ej. Cloruro de Sodio).</p></div>
+                                <div class="border p-4 rounded-md"><h5 class="font-semibold">Oxisales</h5><p class="text-sm">El anión termina en "-ito" (menor valencia) o "-ato" (mayor valencia).</p></div>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const tabsContainer = document.getElementById('tabs');
+            const contentArea = document.getElementById('content-area');
+
+            Object.keys(functionsData).forEach((key, index) => {
+                const button = document.createElement('button');
+                button.dataset.tab = key;
+                button.textContent = functionsData[key].name;
+                button.className = 'tab-btn px-4 py-2 -mb-px font-semibold text-gray-600 border-b-2 border-transparent rounded-t-lg hover:text-gray-800 focus:outline-none transition-colors duration-200';
+                button.setAttribute('role', 'tab');
+                button.setAttribute('aria-selected', index === 0 ? 'true' : 'false');
+                if (index === 0) {
+                    button.classList.add('tab-active');
+                }
+                tabsContainer.appendChild(button);
+            });
+            
+            contentArea.innerHTML = `<div class="section-content" role="tabpanel">${functionsData.oxidos.content}</div>`;
+            contentArea.setAttribute('role', 'tabpanel');
+
+            // Create animated highlight element and initialize its position
+            const highlight = document.createElement('div');
+            highlight.id = 'tabHighlight';
+            highlight.className = 'tab-highlight';
+            tabsContainer.appendChild(highlight);
+
+            function moveHighlightTo(el) {
+                const rect = el.getBoundingClientRect();
+                const containerRect = tabsContainer.getBoundingClientRect();
+                highlight.style.left = `${rect.left - containerRect.left + tabsContainer.scrollLeft}px`;
+                highlight.style.top = `${rect.top - containerRect.top + tabsContainer.scrollTop}px`;
+                highlight.style.width = `${rect.width}px`;
+                highlight.style.height = `${rect.height}px`;
+            }
+
+            const firstButton = tabsContainer.querySelector('button');
+            if (firstButton) moveHighlightTo(firstButton);
+
+            window.addEventListener('resize', () => {
+                const current = tabsContainer.querySelector('button.tab-active') || firstButton;
+                if (current) moveHighlightTo(current);
+            });
+
+            // Recalculate highlight after fonts are loaded
+            document.fonts.ready.then(() => {
+                const current = tabsContainer.querySelector('button.tab-active') || firstButton;
+                if (current) moveHighlightTo(current);
+            });
+
+            tabsContainer.addEventListener('click', (event) => {
+                if (event.target.tagName === 'BUTTON') {
+                    const tabId = event.target.dataset.tab;
+
+                    tabsContainer.querySelectorAll('button').forEach(btn => {
+                        btn.classList.remove('tab-active');
+                    });
+                    event.target.classList.add('tab-active');
+                    event.target.setAttribute('aria-selected', 'true');
+
+                    contentArea.innerHTML = `<div class="section-content" role="tabpanel">${functionsData[tabId].content}</div>`;
+                    moveHighlightTo(event.target);
+                }
+            });
+
+            const ctx = document.getElementById('complexityChart').getContext('2d');
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Óxidos', 'Hidruros', 'Hidróxidos', 'Ácidos', 'Sales'],
+                    datasets: [{
+                        label: 'Componentes base',
+                        data: [2, 2, 0, 0, 0], // e.g., Metal + O for Óxidos
+                        backgroundColor: '#718096', // Gray
+                        stack: 'composition'
+                    }, {
+                        label: 'Compuesto intermedio',
+                        data: [0, 0, 1, 1, 0], // Óxido + H2O for Hidróxidos and Ácidos
+                        backgroundColor: '#E53E3E', // Red
+                        stack: 'composition'
+                    }, {
+                        label: 'Compuesto final',
+                        data: [0, 0, 0, 0, 2], // Ácido + Base for Sales
+                        backgroundColor: '#38A169', // Green
+                        stack: 'composition'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'x', // Vertical bars
+                    scales: {
+                        x: {
+                            stacked: true,
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            stacked: true,
+                            grid: {
+                                display: false
+                            },
+                            max: 4 // Adjusted based on new data
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+body {
+    font-family: 'Inter', sans-serif;
+}
+.tab-active, .tab-active:hover, .tab-active:focus, .tab-active:active, .tab-active:focus-visible {
+    color: #FFFFFF !important;
+}
+
+/* Tabs container positioning for animated highlight */
+#tabs {
+    position: relative;
+}
+/* Ensure buttons render above the highlight */
+.tab-btn {
+    position: relative;
+    z-index: 1;
+}
+/* Animated moving background highlight */
+.tab-highlight {
+    position: absolute;
+    z-index: 0;
+    background-color: #4A5568; /* slate-700 */
+    border-radius: 0.5rem 0.5rem 0 0; /* match rounded-t-lg */
+    transition: left 300ms ease, top 300ms ease, width 300ms ease, height 300ms ease;
+    pointer-events: none;
+}
+
+/* Content animation */
+.section-content {
+    animation: fadeSlideIn 300ms ease both;
+}
+@keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateX(16px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+.reaction-box {
+    border: 1px solid #CBD5E0; /* cool-gray-300 */
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    background-color: #F7FAFC; /* gray-50 */
+    text-align: center;
+    min-width: 100px;
+}
+.reaction-symbol {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #718096; /* gray-500 */
+    padding: 0 1rem;
+}
+.chart-container {
+    position: relative;
+    width: 100%;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+    height: 300px;
+    max-height: 40vh;
+}
+@media (min-width: 768px) {
+    .chart-container {
+        height: 350px;
+    }
+}
